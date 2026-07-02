@@ -1,23 +1,24 @@
-import { execSync } from "node:child_process";
 import process from "node:process";
+import AltTextCheck from "./AltTextCheck.ts";
 import PhpstanCheck from "./PhpstanCheck.ts";
 
 const errors: string[] = [];
 
-const phpStan = new PhpstanCheck();
+const checks = [
+    { name: "PHPStan", check: new PhpstanCheck() },
+    { name: "Alt Text", check: new AltTextCheck() },
+];
 
-if (!phpStan.check()) {
-    errors.push("PHPStan");
+for (const ciCheck of checks) {
+    if (!ciCheck.check.check()) {
+        errors.push(ciCheck.name);
+    }
 }
 
-// Final GitHub result
 if (errors.length > 0) {
-    console.error(`\n::error title=CI failed::${errors.length} check(s) failed: ${errors.join(", ")}.`);
+    console.log(`\nCI failed. Failed tests: ${errors.join(", ")}.`);
     process.exit(1);
 }
-else {
-    //continue with other checks
-}
 
-console.log("\nCI passed. No errors found.");
+console.log("\nCI passed. All tests passed.");
 process.exit(0);
