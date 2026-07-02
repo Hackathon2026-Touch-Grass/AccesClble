@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "check": "tsx CiCheckTest.ts"
+    "check": "tsx .github/workflows/CiCheck.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
