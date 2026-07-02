@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "createdAt": "2026-07-02T13:25:20.638Z",
+  "updatedAt": "2026-07-02T14:22:39.999Z",
+  "entries": [],
+  "history": [
+    {
+      "at": "2026-07-02T13:25:20.638Z",
+      "action": "init",
+      "total": 0,
+      "bySeverity": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      }
+    },
+    {
+      "at": "2026-07-02T14:22:39.999Z",
+      "action": "tighten",
+      "total": 0,
+      "bySeverity": {
+        "critical": 0,
+        "serious": 0,
+        "moderate": 0,
+        "minor": 0
+      }
+    }
+  ]
+}

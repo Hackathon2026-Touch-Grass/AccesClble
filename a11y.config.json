@@ -1,0 +1,27 @@
+{
+    "gate": {
+        "mode": "ratchet",
+        "failOn": "serious",
+        "blockLegalViolations": true
+    },
+    "baselineFile": ".a11y-baseline.json",
+    "checks": {
+        "altText": { "enabled": true },
+        "axeCore": {
+            "enabled": true,
+            "urls": [
+                "http://localhost:8888/",
+                "http://localhost:8888/about",
+                "http://localhost:8888/tasks",
+                "http://localhost:8888/tasks/create",
+                "http://localhost:8888/projects",
+                "http://localhost:8888/projects/create",
+                "http://localhost:8888/tags",
+                "http://localhost:8888/tags/create"
+            ],
+            "tags": ["wcag2a", "wcag2aa", "wcag21aa"],
+            "chromedriverPath": null
+        },
+        "phpstan": { "enabled": true }
+    }
+}

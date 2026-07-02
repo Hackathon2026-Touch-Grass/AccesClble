@@ -100,3 +100,5 @@ cache/
 composer.lock
 .deptrac.cache
 
+# Accessibility gate output (the baseline .a11y-baseline.json IS committed)
+a11y-report.json

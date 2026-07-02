@@ -1,10 +1,14 @@
 {
   "scripts": {
-    "check": "tsx .github/workflows/CiCheck.ts"
+    "check": "tsx .github/workflows/CiCheck.ts",
+    "check:report": "tsx .github/workflows/CiCheck.ts --report-only",
+    "baseline": "tsx .github/workflows/CiCheck.ts --update-baseline",
+    "baseline:accept-debt": "tsx .github/workflows/CiCheck.ts --update-baseline --accept-new-debt"
   },
   "devDependencies": {
     "@axe-core/cli": "^4.12.1",
     "@types/node": "^24.0.0",
+    "chromedriver": "^149.0.4",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   }
