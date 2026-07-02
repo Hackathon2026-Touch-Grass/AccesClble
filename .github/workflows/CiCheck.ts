@@ -1,6 +1,7 @@
 import process from "node:process";
 import AltTextCheck from "./AltTextCheck.ts";
 import PhpstanCheck from "./PhpstanCheck.ts";
+import AxeCoreCheck from "./AxeCoreCheck.ts";
 
 const errors: string[] = [];
 

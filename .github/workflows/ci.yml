@@ -32,5 +32,10 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Start PHP server
+        run: |
+          php -S localhost:8888 -t public &
+          npx wait-on http://localhost:8888
+
       - name: Run TypeScript CI script
         run: npm run check
