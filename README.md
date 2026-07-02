@@ -65,3 +65,20 @@ impact) and categorised:
 Each run also writes `a11y-report.json` (uploaded as a CI artifact), and the
 baseline file keeps a history of every tighten/accept, so you can chart the
 debt trend over time.
+
+
+
+1. Clean state — npm run check → "No accessibility violations found. Accessibility gate: PASSED".
+
+2. Introduce a regression — add this line inside the content block of index.html.twig:
+
+<img src="/logo.png">
+Run npm run check again → gate FAILS with two blocking violations, both tagged [critical · legal blocker] image-alt (one from the static file scan, one from axe auditing the live homepage). This is the anti-regression gate doing its job.
+
+3. Try to sneak it into the baseline — npm run baseline → it refuses (exit 1): "The baseline only shrinks by default." That's the ratchet.
+
+4. Accept it as legacy debt — npm run baseline:accept-debt → now npm run check passes again, listing the img under "Known debt, tolerated by the gate". This simulates adopting the tool on a site with existing debt: old problems don't block, but step 2 proved new ones would.
+
+5. Pay the debt down — remove the <img> line, run npm run check → passes and reports "Fixed since the baseline (2)". Run npm run baseline → tightens back to 0 entries. If you re-add the same img now, it counts as new again — fixed debt can never quietly return.
+
+6. Report-only mode — with any violation present, npm run check:report lists everything but always exits 0. That's the "phase 0" adoption mode.
