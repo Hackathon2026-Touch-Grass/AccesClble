@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: xdebug
+
+      - name: Install dependencies
+        run: composer install --no-interaction
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse
+
+      - name: PHPCS
+        run: vendor/bin/phpcs
+
+      - name: PHPUnit
+        run: ./vendor/bin/phpunit --testdox --colors=always --coverage-text tests
