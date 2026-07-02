@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import type { Severity, Violation } from "./Violation.ts";
-import { countBySeverity } from "./Severity.ts";
+import type { Finding, FindingKind } from "./Finding.ts";
+import { countByKind } from "./Classification.ts";
 
 export type BaselineEntry = {
     fingerprint: string;
     check: string;
     rule: string;
-    severity: Severity;
+    kind: FindingKind;
     location: string;
     message: string;
 };
@@ -16,11 +16,11 @@ export type HistoryPoint = {
     at: string;
     action: "init" | "tighten" | "accept-new-debt";
     total: number;
-    bySeverity: Record<Severity, number>;
+    byKind: Record<FindingKind, number>;
 };
 
 export type Baseline = {
-    version: 1;
+    version: 2;
     createdAt: string;
     updatedAt: string;
     entries: BaselineEntry[];
@@ -29,17 +29,17 @@ export type Baseline = {
 
 export type BaselineComparison = {
     baseline: Baseline | null;
-    newViolations: Violation[];
-    knownViolations: Violation[];
+    newFindings: Finding[];
+    knownFindings: Finding[];
     fixedEntries: BaselineEntry[];
 };
 
 export type BaselineUpdateResult = {
     baseline: Baseline;
     action: HistoryPoint["action"];
-    added: Violation[];
+    added: Finding[];
     removed: BaselineEntry[];
-    rejected: Violation[];
+    rejected: Finding[];
 };
 
 const HISTORY_LIMIT = 100;
@@ -55,7 +55,7 @@ export function loadBaseline(file: string): Baseline | null {
 
     const baseline = JSON.parse(readFileSync(file, "utf8")) as Baseline;
 
-    if (baseline.version !== 1 || !Array.isArray(baseline.entries)) {
+    if (baseline.version !== 2 || !Array.isArray(baseline.entries)) {
         throw new Error(`Unsupported baseline format in ${file}. Recreate it with: npm run baseline`);
     }
 
@@ -63,32 +63,32 @@ export function loadBaseline(file: string): Baseline | null {
 }
 
 export function compareToBaseline(
-    violations: Violation[],
+    findings: Finding[],
     baseline: Baseline | null
 ): BaselineComparison {
     if (baseline === null) {
         return {
             baseline,
-            newViolations: violations,
-            knownViolations: [],
+            newFindings: findings,
+            knownFindings: [],
             fixedEntries: [],
         };
     }
 
     const baselineFingerprints = new Set(baseline.entries.map((entry) => entry.fingerprint));
-    const currentFingerprints = new Set(violations.map((violation) => violation.fingerprint));
+    const currentFingerprints = new Set(findings.map((finding) => finding.fingerprint));
 
     return {
         baseline,
-        newViolations: violations.filter((v) => !baselineFingerprints.has(v.fingerprint)),
-        knownViolations: violations.filter((v) => baselineFingerprints.has(v.fingerprint)),
+        newFindings: findings.filter((f) => !baselineFingerprints.has(f.fingerprint)),
+        knownFindings: findings.filter((f) => baselineFingerprints.has(f.fingerprint)),
         fixedEntries: baseline.entries.filter((entry) => !currentFingerprints.has(entry.fingerprint)),
     };
 }
 
 export function updateBaseline(
     file: string,
-    violations: Violation[],
+    findings: Finding[],
     acceptNewDebt: boolean
 ): BaselineUpdateResult {
     const previous = loadBaseline(file);
@@ -96,36 +96,36 @@ export function updateBaseline(
 
     let action: HistoryPoint["action"];
     let entries: BaselineEntry[];
-    let added: Violation[];
+    let added: Finding[];
     let removed: BaselineEntry[];
-    let rejected: Violation[];
+    let rejected: Finding[];
 
     if (previous === null) {
         // First adoption: snapshot all existing debt so the gate can ratchet from here.
         action = "init";
-        entries = violations.map(toEntry);
-        added = violations;
+        entries = findings.map(toEntry);
+        added = findings;
         removed = [];
         rejected = [];
     } else {
-        const currentFingerprints = new Set(violations.map((v) => v.fingerprint));
+        const currentFingerprints = new Set(findings.map((f) => f.fingerprint));
         const previousFingerprints = new Set(previous.entries.map((e) => e.fingerprint));
         const kept = previous.entries.filter((e) => currentFingerprints.has(e.fingerprint));
-        const newViolations = violations.filter((v) => !previousFingerprints.has(v.fingerprint));
+        const newFindings = findings.filter((f) => !previousFingerprints.has(f.fingerprint));
 
         removed = previous.entries.filter((e) => !currentFingerprints.has(e.fingerprint));
 
-        if (acceptNewDebt && newViolations.length > 0) {
+        if (acceptNewDebt && newFindings.length > 0) {
             action = "accept-new-debt";
-            entries = [...kept, ...newViolations.map(toEntry)];
-            added = newViolations;
+            entries = [...kept, ...newFindings.map(toEntry)];
+            added = newFindings;
             rejected = [];
         } else {
             // The ratchet: debt can only shrink unless growth is explicitly accepted.
             action = "tighten";
             entries = kept;
             added = [];
-            rejected = newViolations;
+            rejected = newFindings;
         }
     }
 
@@ -134,7 +134,7 @@ export function updateBaseline(
     );
 
     const baseline: Baseline = {
-        version: 1,
+        version: 2,
         createdAt: previous?.createdAt ?? now,
         updatedAt: now,
         entries,
@@ -144,7 +144,7 @@ export function updateBaseline(
                 at: now,
                 action,
                 total: entries.length,
-                bySeverity: countBySeverity(entries),
+                byKind: countByKind(entries),
             },
         ].slice(-HISTORY_LIMIT),
     };
@@ -154,13 +154,13 @@ export function updateBaseline(
     return { baseline, action, added, removed, rejected };
 }
 
-function toEntry(violation: Violation): BaselineEntry {
+function toEntry(finding: Finding): BaselineEntry {
     return {
-        fingerprint: violation.fingerprint,
-        check: violation.check,
-        rule: violation.rule,
-        severity: violation.severity,
-        location: violation.location,
-        message: violation.message,
+        fingerprint: finding.fingerprint,
+        check: finding.check,
+        rule: finding.rule,
+        kind: finding.kind,
+        location: finding.location,
+        message: finding.message,
     };
 }

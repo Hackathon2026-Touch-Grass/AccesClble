@@ -2,9 +2,9 @@ import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
-import type { Violation } from "./Violation.ts";
+import type { Finding } from "./Finding.ts";
 import { fingerprint } from "./Baseline.ts";
-import { normalizeSeverity } from "./Severity.ts";
+import { classify } from "./Classification.ts";
 
 export class CheckExecutionError extends Error {
     constructor(checkName: string, detail: string) {
@@ -34,7 +34,7 @@ export default class AxeCoreCheck {
         private readonly chromedriverPath: string | null = null
     ) {}
 
-    public collect(): Violation[] {
+    public collect(): Finding[] {
         return this.parse(this.runAxe());
     }
 
@@ -72,9 +72,9 @@ export default class AxeCoreCheck {
             parts.push("--chromedriver-path", `"${driverPath}"`);
         }
 
+        // execSync always runs the command through a shell.
         const stdout = execSync(parts.join(" "), {
             stdio: ["ignore", "pipe", "pipe"],
-            shell: true,
             encoding: "utf8",
             maxBuffer: 64 * 1024 * 1024,
         });
@@ -82,15 +82,15 @@ export default class AxeCoreCheck {
         return JSON.parse(stdout) as AxePageResult[];
     }
 
-    private parse(pages: AxePageResult[]): Violation[] {
-        const violations: Violation[] = [];
+    private parse(pages: AxePageResult[]): Finding[] {
+        const findings: Finding[] = [];
         const occurrences = new Map<string, number>();
 
         for (const page of pages) {
             const pagePath = this.pathOf(page.url);
 
             for (const axeViolation of page.violations ?? []) {
-                const severity = normalizeSeverity(axeViolation.impact);
+                const kind = classify(axeViolation.id, axeViolation.impact);
 
                 for (const node of axeViolation.nodes) {
                     const target = Array.isArray(node.target)
@@ -103,10 +103,10 @@ export default class AxeCoreCheck {
                     const occurrence = occurrences.get(key) ?? 0;
                     occurrences.set(key, occurrence + 1);
 
-                    violations.push({
+                    findings.push({
                         check: "axe-core",
                         rule: axeViolation.id,
-                        severity,
+                        kind,
                         message: axeViolation.help,
                         location: `${page.url} → ${target}`,
                         fingerprint: fingerprint("axe-core", axeViolation.id, pagePath, target, occurrence),
@@ -115,7 +115,7 @@ export default class AxeCoreCheck {
             }
         }
 
-        return violations;
+        return findings;
     }
 
     private pathOf(url: string): string {

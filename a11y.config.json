@@ -1,8 +1,6 @@
 {
     "gate": {
-        "mode": "ratchet",
-        "failOn": "serious",
-        "blockLegalViolations": true
+        "mode": "ratchet"
     },
     "baselineFile": ".a11y-baseline.json",
     "checks": {

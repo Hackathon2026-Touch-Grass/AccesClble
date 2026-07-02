@@ -1,29 +1,52 @@
 {
-  "version": 1,
+  "version": 2,
   "createdAt": "2026-07-02T13:25:20.638Z",
-  "updatedAt": "2026-07-02T14:22:39.999Z",
+  "updatedAt": "2026-07-02T15:27:17.493Z",
   "entries": [],
   "history": [
     {
       "at": "2026-07-02T13:25:20.638Z",
       "action": "init",
       "total": 0,
-      "bySeverity": {
-        "critical": 0,
-        "serious": 0,
-        "moderate": 0,
-        "minor": 0
+      "byKind": {
+        "violation": 0,
+        "warning": 0
       }
     },
     {
       "at": "2026-07-02T14:22:39.999Z",
       "action": "tighten",
       "total": 0,
-      "bySeverity": {
-        "critical": 0,
-        "serious": 0,
-        "moderate": 0,
-        "minor": 0
+      "byKind": {
+        "violation": 0,
+        "warning": 0
+      }
+    },
+    {
+      "at": "2026-07-02T15:25:30.056Z",
+      "action": "tighten",
+      "total": 0,
+      "byKind": {
+        "violation": 0,
+        "warning": 0
+      }
+    },
+    {
+      "at": "2026-07-02T15:25:37.987Z",
+      "action": "accept-new-debt",
+      "total": 2,
+      "byKind": {
+        "violation": 2,
+        "warning": 0
+      }
+    },
+    {
+      "at": "2026-07-02T15:27:17.493Z",
+      "action": "tighten",
+      "total": 0,
+      "byKind": {
+        "violation": 0,
+        "warning": 0
       }
     }
   ]

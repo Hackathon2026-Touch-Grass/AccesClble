@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { GateConfig, GateMode } from "./Gate.ts";
-import { isSeverity } from "./Severity.ts";
 
 export type A11yConfig = {
     gate: GateConfig;
@@ -20,8 +19,6 @@ export type A11yConfig = {
 export const DEFAULT_CONFIG: A11yConfig = {
     gate: {
         mode: "ratchet",
-        failOn: "serious",
-        blockLegalViolations: true,
     },
     baselineFile: ".a11y-baseline.json",
     checks: {
@@ -58,12 +55,6 @@ export function loadConfig(file = "a11y.config.json"): A11yConfig {
     if (!GATE_MODES.includes(config.gate.mode)) {
         throw new Error(
             `Invalid gate.mode "${config.gate.mode}" in ${file}. Use one of: ${GATE_MODES.join(", ")}`
-        );
-    }
-
-    if (!isSeverity(config.gate.failOn)) {
-        throw new Error(
-            `Invalid gate.failOn "${config.gate.failOn}" in ${file}. Use one of: critical, serious, moderate, minor`
         );
     }
 

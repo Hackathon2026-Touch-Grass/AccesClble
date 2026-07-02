@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { Violation } from "./Violation.ts";
+import type { Finding } from "./Finding.ts";
 import { fingerprint } from "./Baseline.ts";
 
 export default class AltTextCheck {
@@ -17,11 +17,11 @@ export default class AltTextCheck {
         ".twig",
     ]);
 
-    public collect(): Violation[] {
+    public collect(): Finding[] {
         return this.findMissingAltTexts(process.cwd());
     }
 
-    private findMissingAltTexts(directory: string): Violation[] {
+    private findMissingAltTexts(directory: string): Finding[] {
         if (!existsSync(directory)) {
             return [];
         }
@@ -45,11 +45,11 @@ export default class AltTextCheck {
         });
     }
 
-    private findMissingAltTextsInFile(file: string): Violation[] {
+    private findMissingAltTextsInFile(file: string): Finding[] {
         const contents = readFileSync(file, "utf8");
         const imageTagPattern = /<img\b[^>]*>/gi;
         const altAttributePattern = /\salt\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i;
-        const violations: Violation[] = [];
+        const findings: Finding[] = [];
         const occurrences = new Map<string, number>();
         let match: RegExpExecArray | null;
 
@@ -66,17 +66,17 @@ export default class AltTextCheck {
             const occurrence = occurrences.get(tag) ?? 0;
             occurrences.set(tag, occurrence + 1);
 
-            violations.push({
+            findings.push({
                 check: "alt-text",
                 rule: "image-alt",
-                severity: "critical",
+                kind: "violation",
                 message: `Image is missing an alt attribute: ${tag}`,
                 location: `${relativePath}:${this.getLineNumber(contents, match.index)}`,
                 fingerprint: fingerprint("alt-text", "image-alt", relativePath, tag, occurrence),
             });
         }
 
-        return violations;
+        return findings;
     }
 
     private getRelativePath(file: string): string {

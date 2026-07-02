@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import process from "node:process";
-import type { Violation } from "./Violation.ts";
+import type { Finding } from "./Finding.ts";
 import AltTextCheck from "./AltTextCheck.ts";
 import AxeCoreCheck, { CheckExecutionError } from "./AxeCoreCheck.ts";
 import PhpstanCheck from "./PhpstanCheck.ts";
@@ -9,7 +9,7 @@ import { compareToBaseline, loadBaseline, updateBaseline } from "./Baseline.ts";
 import type { BaselineComparison } from "./Baseline.ts";
 import { applyGate } from "./Gate.ts";
 import type { GateResult } from "./Gate.ts";
-import { categorize, countBySeverity, sortBySeverity } from "./Severity.ts";
+import { countByKind, sortByKind } from "./Classification.ts";
 
 const REPORT_FILE = "a11y-report.json";
 
@@ -20,19 +20,19 @@ const reportOnly = args.has("--report-only");
 
 const config = loadConfig();
 
-const violations = collectViolations();
+const findings = collectFindings();
 
 if (updateBaselineMode) {
-    process.exit(runBaselineUpdate(violations));
+    process.exit(runBaselineUpdate(findings));
 }
 
-process.exit(runGatedCheck(violations));
+process.exit(runGatedCheck(findings));
 
-function collectViolations(): Violation[] {
-    const violations: Violation[] = [];
+function collectFindings(): Finding[] {
+    const findings: Finding[] = [];
 
     if (config.checks.altText.enabled) {
-        violations.push(...new AltTextCheck().collect());
+        findings.push(...new AltTextCheck().collect());
     }
 
     if (config.checks.axeCore.enabled) {
@@ -43,7 +43,7 @@ function collectViolations(): Violation[] {
         );
 
         try {
-            violations.push(...axe.collect());
+            findings.push(...axe.collect());
         } catch (error) {
             if (!(error instanceof CheckExecutionError)) {
                 throw error;
@@ -55,15 +55,15 @@ function collectViolations(): Violation[] {
         }
     }
 
-    return violations;
+    return findings;
 }
 
-function runBaselineUpdate(violations: Violation[]): number {
-    const result = updateBaseline(config.baselineFile, violations, acceptNewDebt);
+function runBaselineUpdate(findings: Finding[]): number {
+    const result = updateBaseline(config.baselineFile, findings, acceptNewDebt);
 
     console.log(`\n=== Accessibility baseline: ${result.action} ===`);
     console.log(`Baseline file: ${config.baselineFile}`);
-    console.log(`Known debt locked in: ${result.baseline.entries.length} violation(s)`);
+    console.log(`Known debt locked in: ${describeCounts(result.baseline.entries)}`);
 
     if (result.removed.length > 0) {
         console.log(`\nFixed and removed from the baseline (${result.removed.length}):`);
@@ -79,7 +79,7 @@ function runBaselineUpdate(violations: Violation[]): number {
         console.log(`\nNOT added to the baseline (${result.rejected.length}):`);
         printList(result.rejected);
         console.log(
-            "\nThe baseline only shrinks by default. Fix these violations, or accept them" +
+            "\nThe baseline only shrinks by default. Fix these findings, or accept them" +
                 "\nexplicitly with: npm run baseline:accept-debt"
         );
         return 1;
@@ -88,9 +88,9 @@ function runBaselineUpdate(violations: Violation[]): number {
     return 0;
 }
 
-function runGatedCheck(violations: Violation[]): number {
+function runGatedCheck(findings: Finding[]): number {
     const baseline = loadBaseline(config.baselineFile);
-    const comparison = compareToBaseline(violations, baseline);
+    const comparison = compareToBaseline(findings, baseline);
     const gate = applyGate(
         comparison,
         reportOnly ? { ...config.gate, mode: "report" } : config.gate
@@ -117,18 +117,18 @@ function runGatedCheck(violations: Violation[]): number {
 function printReport(comparison: BaselineComparison, gate: GateResult): void {
     const mode = reportOnly ? "report (forced by --report-only)" : config.gate.mode;
 
+    const scanned = [...comparison.newFindings, ...comparison.knownFindings];
+
     console.log("\n=== Accessibility gate ===");
+    console.log(`Mode: ${mode} | Violations block, warnings never do`);
     console.log(
-        `Mode: ${mode} | Blocks on: ${config.gate.failOn} and up` +
-            `${config.gate.blockLegalViolations ? " + all legal blockers" : ""}`
+        `This scan found: ${describeCounts(scanned)} ` +
+            `— ${comparison.newFindings.length} new, ${comparison.knownFindings.length} known debt`
     );
 
     if (comparison.baseline !== null) {
-        const counts = countBySeverity(comparison.baseline.entries);
         console.log(
-            `Baseline: ${comparison.baseline.entries.length} known violation(s) ` +
-                `(critical: ${counts.critical}, serious: ${counts.serious}, ` +
-                `moderate: ${counts.moderate}, minor: ${counts.minor}) ` +
+            `Baseline (accepted debt): ${describeCounts(comparison.baseline.entries)} ` +
                 `— last updated ${comparison.baseline.updatedAt}`
         );
     }
@@ -138,20 +138,20 @@ function printReport(comparison: BaselineComparison, gate: GateResult): void {
     }
 
     if (gate.blocking.length > 0) {
-        console.log(`\nBlocking violations (${gate.blocking.length}):`);
+        console.log(`\nNew violations, blocking (${gate.blocking.length}):`);
         printList(gate.blocking);
     }
 
-    if (gate.warnings.length > 0) {
-        console.log(`\nNon-blocking warnings (${gate.warnings.length}):`);
-        printList(gate.warnings);
+    if (gate.nonBlocking.length > 0) {
+        console.log(`\nNew warnings, not blocking (${gate.nonBlocking.length}):`);
+        printList(gate.nonBlocking);
     }
 
-    if (comparison.knownViolations.length > 0 && config.gate.mode !== "strict") {
+    if (comparison.knownFindings.length > 0 && config.gate.mode !== "strict") {
         console.log(
-            `\nKnown debt, tolerated by the gate (${comparison.knownViolations.length}):`
+            `\nKnown debt, tolerated by the gate (${comparison.knownFindings.length}):`
         );
-        printList(comparison.knownViolations);
+        printList(comparison.knownFindings);
     }
 
     if (comparison.fixedEntries.length > 0) {
@@ -162,22 +162,26 @@ function printReport(comparison: BaselineComparison, gate: GateResult): void {
 
     if (
         gate.blocking.length === 0 &&
-        gate.warnings.length === 0 &&
-        comparison.knownViolations.length === 0
+        gate.nonBlocking.length === 0 &&
+        comparison.knownFindings.length === 0
     ) {
-        console.log("\nNo accessibility violations found.");
+        console.log("\nNo accessibility findings.");
     }
 
     console.log(`\nAccessibility gate: ${gate.passed ? "PASSED" : "FAILED"}`);
 }
 
+function describeCounts(findings: { kind: Finding["kind"] }[]): string {
+    const counts = countByKind(findings);
+    return `${findings.length} finding(s) (${counts.violation} violations, ${counts.warning} warnings)`;
+}
+
 function printList(
-    violations: { severity: Violation["severity"]; rule: string; location: string; message: string }[]
+    findings: { kind: Finding["kind"]; rule: string; location: string; message: string }[]
 ): void {
-    for (const violation of sortBySeverity(violations)) {
-        const label = categorize(violation) === "legal-blocker" ? "legal blocker" : "UX warning";
-        console.log(`  [${violation.severity} · ${label}] ${violation.rule} — ${violation.location}`);
-        console.log(`      ${violation.message}`);
+    for (const finding of sortByKind(findings)) {
+        console.log(`  [${finding.kind}] ${finding.rule} — ${finding.location}`);
+        console.log(`      ${finding.message}`);
     }
 }
 
@@ -189,23 +193,21 @@ function writeJsonReport(comparison: BaselineComparison, gate: GateResult): void
                 generatedAt: new Date().toISOString(),
                 gate: {
                     mode: reportOnly ? "report" : config.gate.mode,
-                    failOn: config.gate.failOn,
-                    blockLegalViolations: config.gate.blockLegalViolations,
                     passed: gate.passed,
                 },
                 summary: {
-                    total: comparison.newViolations.length + comparison.knownViolations.length,
-                    new: comparison.newViolations.length,
-                    knownDebt: comparison.knownViolations.length,
+                    total: comparison.newFindings.length + comparison.knownFindings.length,
+                    new: comparison.newFindings.length,
+                    knownDebt: comparison.knownFindings.length,
                     fixedSinceBaseline: comparison.fixedEntries.length,
-                    bySeverity: countBySeverity([
-                        ...comparison.newViolations,
-                        ...comparison.knownViolations,
+                    byKind: countByKind([
+                        ...comparison.newFindings,
+                        ...comparison.knownFindings,
                     ]),
                 },
                 blocking: gate.blocking,
-                warnings: gate.warnings,
-                knownDebt: comparison.knownViolations,
+                warnings: gate.nonBlocking,
+                knownDebt: comparison.knownFindings,
                 fixedSinceBaseline: comparison.fixedEntries,
                 baselineHistory: comparison.baseline?.history ?? [],
             },

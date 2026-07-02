@@ -43,23 +43,20 @@ audit the pages listed in `a11y.config.json`.
    run `npm run baseline` and commit — the ratchet tightens and that debt can never return.
 5. When the baseline hits zero, switch `gate.mode` to `"strict"` in `a11y.config.json`.
 
-## Severity ranking
+## Violations vs warnings
 
-Every violation is ranked `critical > serious > moderate > minor` (axe-core
-impact) and categorised:
+Every finding lands in one of two categories:
 
-- **Legal blockers** — WCAG A/AA failures with direct legal exposure (ADA, EAA,
-  Section 508): missing alt text, unlabeled form fields, color contrast,
-  missing page language/title, keyboard traps, etc. These block the pipeline
-  even below the severity threshold.
-- **UX warnings** — the rest. Reported, but only block at or above
-  `gate.failOn` severity.
+- **Violations** — these block the pipeline. Anything axe-core rates
+  critical/serious, plus every WCAG A/AA rule with direct legal exposure
+  (ADA, EAA, Section 508): missing alt text, unlabeled form fields, color
+  contrast, missing page language/title, etc.
+- **Warnings** — everything else (axe-core moderate/minor). Reported so you
+  can see them, but they never fail the build.
 
 ## Configuration (`a11y.config.json`)
 
-- `gate.mode` — `"report"` (never block) → `"ratchet"` (block new violations only, the default) → `"strict"` (block everything).
-- `gate.failOn` — minimum severity that blocks (`"serious"` by default).
-- `gate.blockLegalViolations` — legal blockers always block, regardless of severity (default `true`).
+- `gate.mode` — `"report"` (never block) → `"ratchet"` (block new violations only, the default) → `"strict"` (block all violations, even baselined ones).
 - `checks.axeCore.urls` — the pages axe-core audits.
 
 Each run also writes `a11y-report.json` (uploaded as a CI artifact), and the
@@ -73,7 +70,7 @@ debt trend over time.
 2. Introduce a regression — add this line inside the content block of index.html.twig:
 
 <img src="/logo.png">
-Run npm run check again → gate FAILS with two blocking violations, both tagged [critical · legal blocker] image-alt (one from the static file scan, one from axe auditing the live homepage). This is the anti-regression gate doing its job.
+Run npm run check again → gate FAILS with two blocking violations, both tagged [violation] image-alt (one from the static file scan, one from axe auditing the live homepage). This is the anti-regression gate doing its job.
 
 3. Try to sneak it into the baseline — npm run baseline → it refuses (exit 1): "The baseline only shrinks by default." That's the ratchet.
 
