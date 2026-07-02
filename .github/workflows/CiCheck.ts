@@ -9,7 +9,7 @@ function runCommand(name: string, command: string): boolean {
             shell: true,
         });
 
-        console.log(`✅ ${name} passed`);
+        console.log(`${name} passed`);
         console.log("::endgroup::");
         return true;
     } catch {
@@ -40,7 +40,7 @@ if (hasAccessibilityViolations) {
     console.error("::error title=Accessibility failed::Accessibility violations found.");
     hasErrors = true;
 } else {
-    console.log("✅ Accessibility check passed");
+    console.log("Accessibility check passed");
 }
 
 console.log("::endgroup::");
@@ -51,5 +51,5 @@ if (hasErrors) {
     process.exit(1);
 }
 
-console.log("\n✅ CI passed. No errors found.");
+console.log("\nCI passed. No errors found.");
 process.exit(0);
