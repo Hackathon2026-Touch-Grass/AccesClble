@@ -2,17 +2,21 @@ import { execSync } from "node:child_process";
 import process from "node:process";
 import PhpstanCheck from "./PhpstanCheck.ts";
 
-let hasErrors = false;
-
+const errors: string[] = [];
 
 const phpStan = new PhpstanCheck();
 
-hasErrors = !phpStan.check();
+if (!phpStan.check()) {
+    errors.push("PHPStan");
+}
 
 // Final GitHub result
-if (hasErrors) {
-    console.error("\n::error title=CI failed::One or more checks failed.");
+if (errors.length > 0) {
+    console.error(`\n::error title=CI failed::${errors.length} check(s) failed: ${errors.join(", ")}.`);
     process.exit(1);
+}
+else {
+    //continue with other checks
 }
 
 console.log("\nCI passed. No errors found.");
