@@ -1,0 +1,21 @@
+{
+    "name": "fransblauw/maestro",
+    "type": "framework",
+    "version": "0.1",
+    "autoload": {
+        "psr-4": {
+            "Framework\\": "src/",
+            "App\\": "app/"
+        }
+    },
+    "require": {
+        "php": "^8.2",
+        "ext-pdo": "*",
+        "twig/twig": "^3.21"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^2.1",
+        "squizlabs/php_codesniffer": "^4",
+        "deptrac/deptrac": "^4.5"
+    }
+}

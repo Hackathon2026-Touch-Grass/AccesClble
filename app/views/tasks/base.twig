@@ -1,0 +1,33 @@
+{% extends "partials/base.html.twig" %}
+
+{% set pageTitle = "Tasks" %}
+
+{% set priorities = {
+    0: 'low',
+    1: 'moderate',
+    2: 'high',
+    3: 'urgent'
+} %}
+
+{% set priorityColours = {
+    0: 'secondary',
+    1: 'info',
+    2: 'warning',
+    3: 'danger'
+} %}
+
+{% set statuses = {
+    0: 'new',
+    1: 'deferred',
+    2: 'in progress',
+    3: 'cancelled',
+    4: 'completed'
+} %}
+
+{% set statusColours = {
+    0: 'secondary',
+    1: 'warning',
+    2: 'info',
+    3: 'danger',
+    4: 'success'
+} %}

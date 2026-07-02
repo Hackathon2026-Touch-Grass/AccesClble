@@ -1,0 +1,22 @@
+{% extends "tags/base.twig" %}
+
+{% block content %}
+    <form method="POST" action="/tags">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Create a new tag</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="title">Title</label></div>
+                    <div class="col-sm-9"><input type="text" id="title" name="title" class="form-control"></div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex gap-2">
+                <input type="submit" value="Create" class="btn btn-primary">
+            </div>
+        </div>
+    </form>
+{% endblock %}

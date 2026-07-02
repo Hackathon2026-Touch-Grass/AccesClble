@@ -1,0 +1,115 @@
+{% extends "tasks/base.twig" %}
+
+{% block content %}
+    <form method="POST" action="/tasks/{{ task.id }}/edit">
+
+
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Edit Task</strong>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="title">Title</label></div>
+                    <div class="col-sm-9">
+                        <input type="text" id="title" name="title" class="form-control" value="{{ task.title }}">
+                        {% if errors.title %}<div class="invalid-feedback d-block">{{ errors.title }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="description">Description</label></div>
+                    <div class="col-sm-9 text-break">
+                        <textarea id="description" name="description" class="form-control">{{ task.description }}</textarea>
+                        {% if errors.description %}<div class="invalid-feedback d-block">{{ errors.description }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="project">Project</label></div>
+                    <div class="col-sm-9">
+                        <select name="project" id="project" class="form-select">
+                            <option value=""
+                                    {% if task.projectId == "" %}selected{% endif %}> </option>
+                            {% for project in projects %}
+                                <option value="{{ project.id }}"
+                                        {% if task.projectId == project.id %}selected{% endif %}>{{ project.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                {% set taskTagIds = task.tags|map(tag => tag.id) %}
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="project">Tags</label></div>
+                    <div class="col-sm-9">
+                        {% for tag in tags %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="{{ tag.id }}" id="tag{{ tag.id }}" name="tags[]" {% if tag.id in taskTagIds %}checked{% endif %}>
+                                <label class="form-check-label" for="tag{{ tag.id }}">
+                                    {{ tag.title }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    {% if errors.tags %}<div class="invalid-feedback d-block">{{ errors.tags }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label>Priority</label></div>
+                    <div class="col-sm-9">
+                        {% for value, label in priorities %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="priority" value="{{ value }}"
+                                       id="priority-{{ label }}" {% if task.priority == value %}checked{% endif %}>
+                                <label class="form-check-label" for="priority-{{ label }}">
+                                    {{ label|capitalize }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                        {% if errors.priority %}<div class="invalid-feedback d-block">{{ errors.priority }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="status" class="form-label">Status</label></div>
+                    <div class="col-sm-9">
+                        <select name="status" id="status" class="form-select">
+                            {% for value, label in statuses %}
+                                <option value="{{ value }}"
+                                        {% if task.status == value %}selected{% endif %}>{{ label|title }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if errors.status %}<div class="invalid-feedback d-block">{{ errors.status }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="progress">Progress</label></div>
+                    <div class="col-sm-9">
+                        <input type="range" min="0" max="100" id="progress" name="progress" class="form-range" value="{{ task.progress }}">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="created_at">Date Started</label></div>
+                    <div class="col-sm-9">
+                        <input type="date" id="created_at" name="created_at" class="form-control"
+                               value="{{ task.createdAt | date("Y-m-d") }}">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="completed_at">Date Completed</label></div>
+                    <div class="col-sm-9">
+                        <input type="date" id="completed_at" name="completed_at" class="form-control"
+                               {% if task.completedAt %}value="{{ task.completedAt | date("Y-m-d") }}"{% endif %}>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <input type="submit" value="Save" class="btn btn-primary">
+                <a class="btn btn-danger" href="/tasks/{{ task.id }}/delete">Delete Task</a>
+            </div>
+        </div>
+    </form>
+{% endblock %}

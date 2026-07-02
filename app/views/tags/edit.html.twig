@@ -1,0 +1,23 @@
+{% extends "tags/base.twig" %}
+
+{% block content %}
+    <form method="POST" action="/tags/{{ tag.id }}/edit">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <strong>Edit tag</strong>
+            </div>
+
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3 fw-bold"><label for="title">Title</label></div>
+                    <div class="col-sm-9"><input type="text" id="title" name="title" class="form-control" value="{{ tag.title }}"></div>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex gap-2">
+                <input type="submit" value="Update" class="btn btn-primary">
+                <a href="/tags/{{ tag.id }}/delete" class="btn btn-danger">Delete Tag</a>
+            </div>
+        </div>
+    </form>
+{% endblock %}

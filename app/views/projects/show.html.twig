@@ -1,0 +1,43 @@
+{% extends "projects/base.twig" %}
+
+{% block content %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <strong>Project Details</strong>
+        </div>
+
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Title</div>
+                <div class="col-sm-9">{{ project.title }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Description</div>
+                <div class="col-sm-9 text-break">{{ project.description }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Tasks</div>
+                <div class="col-sm-9">
+                    {% if tasks is not empty %}
+                        <ul class="list-group list-group-flush">
+                            {% for task in tasks %}
+                                <li class="list-group-item px-0">
+                                    <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <span class="text-muted">No tasks yet</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex gap-2">
+            <a href="/projects/{{ project.id }}/edit" class="btn btn-primary">Edit Project</a>
+        </div>
+    </div>
+
+{% endblock %}

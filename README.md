@@ -8,3 +8,8 @@
 - Thijs
 - Twan
 ## AccesClble
+
+# PortfolioMaestro
+`composer install` Install dependencies\
+`php maestro migrate` Get database working\
+`php maestro serve` Run

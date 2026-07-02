@@ -1,0 +1,23 @@
+{% extends "tasks/base.twig" %}
+
+{% block content %}
+    <div class="text-end mb-3">
+        <a href="/tasks/create" class="btn btn-primary">Create New Task</a>
+    </div>
+    <table class="table table-striped align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 50%">Title</th>
+                <th style="width: 15%">View</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for task in tasks %}
+            <tr>
+                <td>{{ task.title }}</td>
+                <td><a href="/tasks/{{ task.id }}" class="btn btn-info">View</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

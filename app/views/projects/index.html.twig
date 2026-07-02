@@ -1,0 +1,23 @@
+{% extends "projects/base.twig" %}
+
+{% block content %}
+    <div class="text-end mb-3">
+        <a href="/projects/create" class="btn btn-primary">Create New Project</a>
+    </div>
+    <table class="table table-striped align-middle">
+        <thead class="table-dark">
+        <tr>
+            <th style="width: 90%">Title</th>
+            <th style="width: 10%">View</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for project in projects %}
+            <tr>
+                <td>{{ project.title }}</td>
+                <td><a href="/projects/{{ project.id }}" class="btn btn-info">View</a></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

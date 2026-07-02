@@ -1,0 +1,24 @@
+deptrac:
+  paths:
+    - ./src
+    - ./app
+  exclude_files:
+    - '#.*test.*#'
+  layers:
+    - name: App
+      collectors:
+        - type: classLike
+          value: ^App\\.*
+    - name: Framework
+      collectors:
+        - type: classLike
+          value: ^Framework\\.*
+    - name: Vendor
+      collectors:
+        - type: classLike
+          value: ^Twig\\.*
+  ruleset:
+    App:
+      - Framework
+    Framework:
+      - Vendor

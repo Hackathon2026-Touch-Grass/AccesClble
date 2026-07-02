@@ -1,0 +1,80 @@
+{% extends "tasks/base.twig" %}
+
+{% block content %}
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <strong>Task Details</strong>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Project</div>
+                <div class="col-sm-9">
+                    <a href="/projects/{{ task.projectId }}">{{ project.title }}</a>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Title</div>
+                <div class="col-sm-9">{{ task.title }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Description</div>
+                <div class="col-sm-9 text-break">{{ task.description }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Tags</div>
+                <div class="col-sm-9 text-break">
+                {% for tag in task.tags %}
+                    <a href="/tags/{{ tag.id }}" class="badge rounded-pill text-bg-primary text-decoration-none">{{ tag.title }}</a>
+                {% endfor %}
+
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Priority</div>
+                <div class="col-sm-9">
+                    <span class="badge bg-{{ priorityColours[task.priority] }}">{{ priorities[task.priority]|capitalize }}</span>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Status</div>
+                <div class="col-sm-9">
+                    <span class="badge bg-{{ statusColours[task.status] }}">{{ statuses[task.status]|title }}</span>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Progress</div>
+                <div class="col-sm-9">
+                    <div class="progress" role="progressbar" aria-valuenow="{{ task.progress }}" aria-valuemin="0" aria-valuemax="100">
+                        <div class="progress-bar" style="width: {{ task.progress }}%">{{ task.progress }}%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Created</div>
+                <div class="col-sm-9">{{ task.createdAt|date("d/m/Y") }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-3 fw-bold">Completed</div>
+                <div class="col-sm-9">
+                    {% if task.completedAt %}
+                        {{ task.completedAt|date("d/m/Y") }}
+                    {% else %}
+                        <span class="text-muted">Not completed yet</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex gap-2">
+            <a href="/tasks/{{ task.id }}/edit" class="btn btn-primary">Edit Task</a>
+        </div>
+    </div>
+{% endblock %}
