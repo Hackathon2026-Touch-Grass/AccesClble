@@ -6,11 +6,19 @@ on:
 
 jobs:
   check:
+    name: Run project checks
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo, pdo_sqlite
+          tools: composer
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -18,8 +26,16 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist
+
       - name: Install npm dependencies
         run: npm ci
 
-      - name: Run CI check
+      - name: Start PHP server
+        run: |
+          php -S localhost:8888 -t public &
+          npx wait-on http://localhost:8888
+
+      - name: Run TypeScript CI script
         run: npm run check

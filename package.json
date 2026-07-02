@@ -1,8 +1,9 @@
 {
   "scripts": {
-    "check": "tsx CiCheckTest.ts"
+    "check": "tsx .github/workflows/CiCheck.ts"
   },
   "devDependencies": {
+    "@axe-core/cli": "^4.12.1",
     "@types/node": "^24.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
