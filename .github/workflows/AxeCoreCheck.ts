@@ -18,7 +18,8 @@ export default class AxeCoreCheck extends BaseClass {
 
         return this.runCommand(
             "axe-core (WCAG)",
-            `npx axe ${this.url} --tags ${tagsArg} --exit`
+            `npx axe ${this.url} --tags ${tagsArg} --exit`,
+            false
         );
     }
 }

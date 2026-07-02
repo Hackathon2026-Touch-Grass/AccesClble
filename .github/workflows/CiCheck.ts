@@ -8,6 +8,7 @@ const errors: string[] = [];
 const checks = [
     { name: "PHPStan", check: new PhpstanCheck() },
     { name: "Alt Text", check: new AltTextCheck() },
+    { name: "Axe-core (WCAG)", check: new AxeCoreCheck() },
 ];
 
 for (const ciCheck of checks) {
