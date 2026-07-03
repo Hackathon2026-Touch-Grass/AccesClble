@@ -4,12 +4,8 @@ import type { Finding } from "./Finding.ts";
 import AltTextCheck from "./AltTextCheck.ts";
 import AxeCoreCheck, { CheckExecutionError } from "./AxeCoreCheck.ts";
 import PhpstanCheck from "./PhpstanCheck.ts";
-import { loadConfig } from "./A11yConfig.ts";
-import { compareToBaseline, loadBaseline, updateBaseline } from "./Baseline.ts";
-import type { BaselineComparison } from "./Baseline.ts";
-import { applyGate } from "./Gate.ts";
-import type { GateResult } from "./Gate.ts";
-import { countByKind, sortByKind } from "./Classification.ts";
+import AxeCoreCheck from "./AxeCoreCheck.ts";
+import GitDiffCheck from "./GitDiffCheck.ts";
 
 const REPORT_FILE = "a11y-report.json";
 
@@ -18,100 +14,25 @@ const updateBaselineMode = args.has("--update-baseline");
 const acceptNewDebt = args.has("--accept-new-debt");
 const reportOnly = args.has("--report-only");
 
-const config = loadConfig();
+const reports = [
+    { name: "Accessibility Diff", report: new GitDiffCheck(false) },
+];
 
-const findings = collectFindings();
-
-if (updateBaselineMode) {
-    process.exit(runBaselineUpdate(findings));
-}
-
-process.exit(runGatedCheck(findings));
-
-function collectFindings(): Finding[] {
-    const findings: Finding[] = [];
-
-    if (config.checks.altText.enabled) {
-        findings.push(...new AltTextCheck().collect());
-    }
-
-    if (config.checks.axeCore.enabled) {
-        const axe = new AxeCoreCheck(
-            config.checks.axeCore.urls,
-            config.checks.axeCore.tags,
-            config.checks.axeCore.chromedriverPath
-        );
-
-        try {
-            findings.push(...axe.collect());
-        } catch (error) {
-            if (!(error instanceof CheckExecutionError)) {
-                throw error;
-            }
-
-            console.error(`\n${error.message}`);
-            console.error("The gate cannot judge what it cannot measure, so this run fails.");
-            process.exit(1);
-        }
-    }
-
-    return findings;
-}
-
-function runBaselineUpdate(findings: Finding[]): number {
-    const result = updateBaseline(config.baselineFile, findings, acceptNewDebt);
-
-    console.log(`\n=== Accessibility baseline: ${result.action} ===`);
-    console.log(`Baseline file: ${config.baselineFile}`);
-    console.log(`Known debt locked in: ${describeCounts(result.baseline.entries)}`);
-
-    if (result.removed.length > 0) {
-        console.log(`\nFixed and removed from the baseline (${result.removed.length}):`);
-        printList(result.removed);
-    }
-
-    if (result.added.length > 0 && result.action !== "init") {
-        console.log(`\nNewly accepted as debt (${result.added.length}):`);
-        printList(result.added);
-    }
-
-    if (result.rejected.length > 0) {
-        console.log(`\nNOT added to the baseline (${result.rejected.length}):`);
-        printList(result.rejected);
-        console.log(
-            "\nThe baseline only shrinks by default. Fix these findings, or accept them" +
-                "\nexplicitly with: npm run baseline:accept-debt"
-        );
-        return 1;
+for (const ciCheck of checks) {
+    if (!ciCheck.check.check()) {
+        errors.push(ciCheck.name);
     }
 
     return 0;
 }
 
-function runGatedCheck(findings: Finding[]): number {
-    const baseline = loadBaseline(config.baselineFile);
-    const comparison = compareToBaseline(findings, baseline);
-    const gate = applyGate(
-        comparison,
-        reportOnly ? { ...config.gate, mode: "report" } : config.gate
-    );
+for (const ciReport of reports) {
+    ciReport.report.check();
+}
 
-    printReport(comparison, gate);
-    writeJsonReport(comparison, gate);
-
-    const phpstanPassed = config.checks.phpstan.enabled ? new PhpstanCheck().check() : true;
-
-    if (!gate.passed || !phpstanPassed) {
-        const failed = [
-            ...(gate.passed ? [] : ["accessibility gate"]),
-            ...(phpstanPassed ? [] : ["PHPStan"]),
-        ];
-        console.log(`\nCI failed: ${failed.join(", ")}.`);
-        return 1;
-    }
-
-    console.log("\nCI passed.");
-    return 0;
+if (errors.length > 0) {
+    console.log(`\nCI failed. Failed tests: ${errors.join(", ")}.`);
+    process.exit(1);
 }
 
 function printReport(comparison: BaselineComparison, gate: GateResult): void {
