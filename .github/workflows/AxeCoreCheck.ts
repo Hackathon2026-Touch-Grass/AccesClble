@@ -1,6 +1,32 @@
 import { execFileSync } from "node:child_process";
 import AccessibilityJsonReport from "./AccessibilityJsonReport.ts";
 import { BaseClass } from "./BaseClass";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import type { Finding } from "./Finding.ts";
+import { fingerprint } from "./Baseline.ts";
+import { classify } from "./Classification.ts";
+
+export class CheckExecutionError extends Error {
+    constructor(checkName: string, detail: string) {
+        super(`${checkName} could not run: ${detail}`);
+        this.name = "CheckExecutionError";
+    }
+}
+type AxeNode = { target: string[] | string };
+type AxeViolation = {
+    id: string;
+    impact?: string | null;
+    help: string;
+    nodes: AxeNode[];
+};
+
+type AxePageResult = {
+    url: string;
+    violations?: AxeViolation[];
+};
 
 export default class AxeCoreCheck extends BaseClass {
     private readonly url: string;
@@ -16,48 +42,136 @@ export default class AxeCoreCheck extends BaseClass {
         "region": "Place page content inside semantic landmarks such as header, nav, main, aside, or footer.",
     };
 
+export default class AxeCoreCheck {
     constructor(
-        url: string = "http://localhost:8888",
-        tags: string[] = ["wcag2a", "wcag2aa", "wcag21aa"]
-    ) {
-        super();
-        this.url = url;
-        this.tags = tags;
+        private readonly urls: string[],
+        private readonly tags: string[],
+        private readonly chromedriverPath: string | null = null
+    ) {}
+
+    public collect(): Finding[] {
+        return this.parse(this.runAxe());
     }
 
-    public check(): boolean {
-        console.log("\nTest: axe-core (WCAG)");
-
-        const tagsArg = this.tags.join(",");
+    private runAxe(): AxePageResult[] {
+        const driverOverride =
+            process.env.A11Y_CHROMEDRIVER_PATH ?? this.chromedriverPath ?? undefined;
 
         try {
-            const output = execFileSync(
-                "npx",
-                ["axe", this.url, "--tags", tagsArg, "--stdout"],
-                {
-                    encoding: "utf8",
-                    maxBuffer: 1024 * 1024 * 20,
-                    stdio: ["ignore", "pipe", "ignore"],
-                }
-            );
+            return this.runAxeWithDriver(driverOverride);
+        } catch (error) {
+            // The chromedriver bundled with @axe-core/cli tracks the newest
+            // Chrome; fall back to a locally pinned chromedriver when the
+            // installed Chrome is older.
+            const fallback = this.localChromedriverPath();
 
-            const results = JSON.parse(output);
-            const report = AccessibilityJsonReport.axeCore(results, this.fixHints);
-            const passed = (results.violations ?? []).length === 0;
+            if (this.isDriverMismatch(error) && fallback !== null && fallback !== driverOverride) {
+                return this.runAxeWithDriver(fallback);
+            }
 
-            console.log(`Result: ${passed ? "Passed" : "Failed"}`);
-            AccessibilityJsonReport.print(report);
-
-            return passed;
-        } catch {
-            console.log("Result: Failed");
-            AccessibilityJsonReport.print(
-                AccessibilityJsonReport.axeCoreError(
-                    this.url,
-                    "Could not run axe-core or parse axe-core JSON output. Make sure the site is running before this check starts."
-                )
-            );
-            return false;
+            throw new CheckExecutionError("axe-core", this.describe(error));
         }
+    }
+
+    private runAxeWithDriver(driverPath: string | undefined): AxePageResult[] {
+        const parts = [
+            "npx",
+            "axe",
+            ...this.urls.map((url) => `"${url}"`),
+            "--tags",
+            this.tags.join(","),
+            "--stdout",
+        ];
+
+        if (driverPath !== undefined) {
+            parts.push("--chromedriver-path", `"${driverPath}"`);
+        }
+
+        // execSync always runs the command through a shell.
+        const stdout = execSync(parts.join(" "), {
+            stdio: ["ignore", "pipe", "pipe"],
+            encoding: "utf8",
+            maxBuffer: 64 * 1024 * 1024,
+        });
+
+        return JSON.parse(stdout) as AxePageResult[];
+    }
+
+    private parse(pages: AxePageResult[]): Finding[] {
+        const findings: Finding[] = [];
+        const occurrences = new Map<string, number>();
+
+        for (const page of pages) {
+            const pagePath = this.pathOf(page.url);
+
+            for (const axeViolation of page.violations ?? []) {
+                const kind = classify(axeViolation.id, axeViolation.impact);
+
+                for (const node of axeViolation.nodes) {
+                    const target = Array.isArray(node.target)
+                        ? node.target.join(" ")
+                        : String(node.target);
+
+                    // Fingerprint on path + selector (not the full URL), so the
+                    // same page audited on another host or port still matches.
+                    const key = `${axeViolation.id}|${pagePath}|${target}`;
+                    const occurrence = occurrences.get(key) ?? 0;
+                    occurrences.set(key, occurrence + 1);
+
+                    findings.push({
+                        check: "axe-core",
+                        rule: axeViolation.id,
+                        kind,
+                        message: axeViolation.help,
+                        location: `${page.url} → ${target}`,
+                        fingerprint: fingerprint("axe-core", axeViolation.id, pagePath, target, occurrence),
+                    });
+                }
+            }
+        }
+
+        return findings;
+    }
+
+    private pathOf(url: string): string {
+        try {
+            return new URL(url).pathname;
+        } catch {
+            return url;
+        }
+    }
+
+    private localChromedriverPath(): string | null {
+        const binary = process.platform === "win32" ? "chromedriver.exe" : "chromedriver";
+        const driverPath = path.join(
+            process.cwd(),
+            "node_modules",
+            "chromedriver",
+            "lib",
+            "chromedriver",
+            binary
+        );
+
+        return existsSync(driverPath) ? driverPath : null;
+    }
+
+    private isDriverMismatch(error: unknown): boolean {
+        return this.describe(error).includes("This version of ChromeDriver only supports");
+    }
+
+    private describe(error: unknown): string {
+        const parts: string[] = [];
+
+        if (error instanceof Error) {
+            parts.push(error.message);
+        }
+
+        const stderr = (error as { stderr?: unknown }).stderr;
+
+        if (typeof stderr === "string" && stderr.trim() !== "") {
+            parts.push(stderr.trim());
+        }
+
+        return parts.join("\n") || String(error);
     }
 }
