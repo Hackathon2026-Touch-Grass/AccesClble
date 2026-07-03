@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import AccessibilityJsonReport from "./AccessibilityJsonReport.ts";
 
 type ChangedFile = {
     path: string;
@@ -27,31 +28,16 @@ export default class GitDiffCheck {
         }
 
         const changedFiles = this.getChangedFiles(baseCommit);
-        const fullDiff = this.getFullDiff(baseCommit);
+        const fullDiff = this.showFullOutput ? this.getFullDiff(baseCommit) : null;
+        const report = AccessibilityJsonReport.commitDiff(
+            baseCommit,
+            "HEAD",
+            changedFiles,
+            fullDiff
+        );
 
         console.log("Result: Passed");
-        console.log(`Compared commits: ${baseCommit} -> HEAD`);
-
-        if (changedFiles.length === 0) {
-            console.log("No changed files found.");
-            return true;
-        }
-
-        console.log("Changed files:");
-
-        for (const changedFile of changedFiles) {
-            console.log(
-                `- ${changedFile.status} ${changedFile.path} ` +
-                `(+${changedFile.additions}, -${changedFile.deletions})`
-            );
-        }
-
-        if (this.showFullOutput) {
-            console.log("\nFull code diff:");
-            console.log(fullDiff);
-        } else {
-            console.log("\nFull code diff is hidden. Set showFullOutput to true to print every + and - line.");
-        }
+        AccessibilityJsonReport.print(report);
 
         return true;
     }
