@@ -1,0 +1,152 @@
+<div id="wrap">
+    <div id="score">Score: 0</div>
+    <div id="overlay">
+        <canvas id="game" width="600" height="200"></canvas>
+        <div id="gameover">Game Over — press Space to restart</div>
+        <div id="startscreen">Press Space to start</div>
+    </div>
+    <div id="hint">Press Space / click / tap to jump</div>
+</div>
+
+<style>
+    #wrap { text-align: center; font-family: system-ui, sans-serif; }
+    #game { background: #ffffff; border: 2px solid #333; border-radius: 8px; display: block; margin: 0 auto; }
+    #score { font-size: 20px; margin-bottom: 8px; color: #333; }
+    #hint { font-size: 13px; color: #888; margin-top: 8px; }
+    #overlay { position: relative; display: inline-block; }
+    #gameover { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; color: #c0392b; font-weight: bold; display: none; }
+    #startscreen { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; color: #2d7dd2; font-weight: bold; display: block; }
+</style>
+
+<script>
+    (function () {
+        const canvas = document.getElementById('game');
+        if (!canvas) return;
+
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const gameoverEl = document.getElementById('gameover');
+        const startscreenEl = document.getElementById('startscreen');
+
+        const FLOOR_Y = 150;
+        const GRAVITY = 0.9;
+        const JUMP_FORCE = -13;
+
+        const player = { x: 60, y: FLOOR_Y, radius: 14, vy: 0, grounded: true };
+
+        let obstacles = [];
+        let speed = 5;
+        let frame = 0;
+        let score = 0;
+        let running = false;
+        let started = false;
+
+        function resetGame() {
+            player.y = FLOOR_Y;
+            player.vy = 0;
+            player.grounded = true;
+            obstacles = [];
+            speed = 5;
+            frame = 0;
+            score = 0;
+            running = true;
+            gameoverEl.style.display = 'none';
+        }
+
+        function startGame() {
+            started = true;
+            startscreenEl.style.display = 'none';
+            resetGame();
+        }
+
+        function jump() {
+            if (!started) {
+                startGame();
+                return;
+            }
+            if (!running) {
+                resetGame();
+                return;
+            }
+            if (player.grounded) {
+                player.vy = JUMP_FORCE;
+                player.grounded = false;
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') { e.preventDefault(); jump(); }
+        });
+        canvas.addEventListener('mousedown', jump);
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+
+        function spawnObstacle() {
+            const size = 20 + Math.random() * 20;
+            obstacles.push({ x: canvas.width + size, y: FLOOR_Y - size, size: size });
+        }
+
+        function update() {
+            if (!started || !running) return;
+            frame++;
+
+            if (frame % 90 === 0) speed += 0.3;
+            if (frame % Math.max(45, Math.floor(80 - speed * 3)) === 0) spawnObstacle();
+
+            player.vy += GRAVITY;
+            player.y += player.vy;
+            if (player.y >= FLOOR_Y) {
+                player.y = FLOOR_Y;
+                player.vy = 0;
+                player.grounded = true;
+            }
+
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const o = obstacles[i];
+                o.x -= speed;
+
+                if (o.x + o.size < 0) {
+                    obstacles.splice(i, 1);
+                    score += 1;
+                    continue;
+                }
+
+                const closestX = Math.max(o.x, Math.min(player.x, o.x + o.size));
+                const closestY = Math.max(o.y, Math.min(player.y, o.y + o.size));
+                const dx = player.x - closestX;
+                const dy = player.y - closestY;
+                if (dx * dx + dy * dy < player.radius * player.radius) {
+                    running = false;
+                    gameoverEl.style.display = 'block';
+                }
+            }
+
+            scoreEl.textContent = 'Score: ' + score;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, FLOOR_Y);
+            ctx.lineTo(canvas.width, FLOOR_Y);
+            ctx.stroke();
+
+            ctx.fillStyle = '#2d7dd2';
+            ctx.beginPath();
+            ctx.arc(player.x, player.y - player.radius, player.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#e05252';
+            obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.size, o.size));
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    })();
+</script>

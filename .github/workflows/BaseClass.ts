@@ -5,9 +5,9 @@ export abstract class BaseClass {
         console.log(`\nTest: ${name}`);
 
         try {
+            // execSync always runs the command through a shell.
             execSync(command, {
                 stdio: showCommandOutput ? "inherit" : "ignore",
-                shell: true,
             });
 
             console.log("Result: Passed");
