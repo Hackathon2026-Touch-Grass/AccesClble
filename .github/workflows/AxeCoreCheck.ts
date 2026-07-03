@@ -108,7 +108,7 @@ export default class AxeCoreCheck {
                         rule: axeViolation.id,
                         kind,
                         message: axeViolation.help,
-                        location: `${page.url} → ${target}`,
+                        location: `${page.url} -> ${target}`,
                         fingerprint: fingerprint("axe-core", axeViolation.id, pagePath, target, occurrence),
                     });
                 }
