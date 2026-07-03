@@ -1,6 +1,3 @@
-import { execFileSync } from "node:child_process";
-import AccessibilityJsonReport from "./AccessibilityJsonReport.ts";
-import { BaseClass } from "./BaseClass";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -15,7 +12,9 @@ export class CheckExecutionError extends Error {
         this.name = "CheckExecutionError";
     }
 }
+
 type AxeNode = { target: string[] | string };
+
 type AxeViolation = {
     id: string;
     impact?: string | null;
@@ -27,20 +26,6 @@ type AxePageResult = {
     url: string;
     violations?: AxeViolation[];
 };
-
-export default class AxeCoreCheck extends BaseClass {
-    private readonly url: string;
-    private readonly tags: string[];
-    private readonly fixHints: Record<string, string> = {
-        "button-name": "Add visible text, aria-label, or aria-labelledby so screen readers can announce the button.",
-        "color-contrast": "Increase the contrast between foreground and background colors until it meets the required WCAG ratio.",
-        "document-title": "Add a descriptive title element that explains the current page.",
-        "html-has-lang": "Add a lang attribute to the html element, for example <html lang=\"en\"> or <html lang=\"nl\">.",
-        "image-alt": "Add meaningful alt text that describes the image purpose. If the image is decorative, use alt=\"\".",
-        "label": "Connect every form control to a visible label using for/id, aria-label, or aria-labelledby.",
-        "link-name": "Add descriptive link text or an accessible label that explains where the link goes.",
-        "region": "Place page content inside semantic landmarks such as header, nav, main, aside, or footer.",
-    };
 
 export default class AxeCoreCheck {
     constructor(
@@ -123,7 +108,7 @@ export default class AxeCoreCheck {
                         rule: axeViolation.id,
                         kind,
                         message: axeViolation.help,
-                        location: `${page.url} → ${target}`,
+                        location: `${page.url} -> ${target}`,
                         fingerprint: fingerprint("axe-core", axeViolation.id, pagePath, target, occurrence),
                     });
                 }
